@@ -191,11 +191,11 @@ MB.vecThumb = (a, size = 96) => {
   MB.drawPrims(x, MB.vecPrims(a.id, (size - w) / 2, (size - h) / 2, w, h), 1, {});
   return (thumbCache[key] = c.toDataURL());
 };
-const vecThumbRaw = (vec, size) => { // thumbnail for a library item that is not in the project yet
+const vecThumbRaw = MB.vecThumbRaw = (vec, size, mono) => { // thumbnail for a library item that is not in the project yet (mono = one-colour silhouette)
   const tmp = { id: '__tmp', name: '', vec }, keep = MB.assets.__tmp; MB.assets.__tmp = tmp;
   const c = document.createElement('canvas'); c.width = c.height = size; const x = c.getContext('2d');
   const k = Math.min((size - 8) / vec.w, (size - 8) / vec.h), w = vec.w * k, h = vec.h * k;
-  MB.drawPrims(x, MB.vecPrims('__tmp', (size - w) / 2, (size - h) / 2, w, h), 1, {});
+  MB.drawPrims(x, MB.vecPrims('__tmp', (size - w) / 2, (size - h) / 2, w, h, mono ? { style: 'mono', color: mono } : {}), 1, {});
   if (keep) MB.assets.__tmp = keep; else delete MB.assets.__tmp;
   return c.toDataURL();
 };

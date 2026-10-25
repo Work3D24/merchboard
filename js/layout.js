@@ -237,7 +237,7 @@ function imagesBlock(c, th, x, y, w, h, out, capH) {
   const vs = c.variants || [];
   if (!vs.length || w <= 2 || h <= 2) { out.push({ t: 'ph', x, y, w: Math.max(w, 2), h: Math.max(h, 2), label: 'วางรูปสินค้า', card: c.id }); return 0; }
   const n = vs.length, g = th.imgGap, showB = th.badge.on && n > 1 && !c.noBadge;
-  const bs = th.badge.size, bd = bs * 1.45, ss = th.sub.size;
+  const bv = vecShape(th.badge.shape), bs = th.badge.size, bd = bs * 1.45 * (bv ? th.badge.vscale || 1.4 : 1), ss = th.sub.size;
   const hasSub = !c.noSub && vs.some(v => v.sub);
   const subBelow = th.subPos === 'below';
   const subL = hasSub ? Math.max(...vs.map(v => splitLines(v.sub).length)) : 0, subH = hasSub ? ss * (1.5 + 1.2 * (subL - 1)) : 0;
@@ -280,8 +280,11 @@ function imagesBlock(c, th, x, y, w, h, out, capH) {
       if (v.price !== '' && v.price != null) prices.push({ price: String(v.price), x: icx, below, lab });
       if (showB) {
         const by = ly - bd - bs * 0.2;
-        out.push({ t: 'rect', name: 'Badge ' + lab, x: icx - bd / 2, y: by, w: bd, h: bd, r: bd / 2, fill: th.badge.fill, op: 1 });
-        out.push(T(lab, th.badge.font, bs, th.badge.color, icx, by + bd / 2 + bs * 0.36, 'center', 'Badge ' + lab + ' text'));
+        if (bv) { // one-colour library / imported vector (star, cat, ♠ …) behind the letter
+          const asp = MB.vecAspect(bv), bw = asp >= 1 ? bd : bd * asp, bh = asp >= 1 ? bd / asp : bd;
+          out.push({ t: 'group', name: 'Badge ' + lab, children: MB.vecPrims(bv, icx - bw / 2, by + (bd - bh) / 2, bw, bh, { style: 'mono', color: th.badge.fill, name: 'Badge ' + lab }) });
+        } else if (th.badge.shape !== 'none') out.push({ t: 'rect', name: 'Badge ' + lab, x: icx - bd / 2, y: by, w: bd, h: bd, r: bd / 2, fill: th.badge.fill, op: 1 });
+        out.push(T(lab, th.badge.font, bs, th.badge.color, icx, by + bd / 2 + bs * 0.36 + (bv ? (th.badge.ty || 0) * bd : 0), 'center', 'Badge ' + lab + ' text'));
       }
       const z = v.zoom || 1, zw = fw * z, zh = fh * z, ix = icx - zw / 2 + (v.ox || 0), iy2 = iy + (fh - zh) / 2 + (v.oy || 0);
       if (v.asset && MB.assets[v.asset]) out.push({ t: 'img', name: nm + ' ' + lab, asset: v.asset, x: ix, y: iy2, w: zw, h: zh, card: c.id, vid: v.id });

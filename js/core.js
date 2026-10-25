@@ -256,7 +256,7 @@ MB.usedAssetIds = (st) => {
   st.footer.logos.forEach(l => l.asset && s.add(l.asset));
   (st.vecLib || []).forEach(id => s.add(id));
   const o = st.theme.orn || {}; [o.titlePre, o.titlePost, o.pricePre, o.pricePost].forEach(id => id && s.add(id));
-  const ps = String(st.theme.price.shape || ''); if (ps.startsWith('vec:')) s.add(ps.slice(4));
+  [st.theme.price.shape, st.theme.badge.shape].forEach(sh => { sh = String(sh || ''); if (sh.startsWith('vec:')) s.add(sh.slice(4)); });
   st.cards.forEach(c => { const cs = c.style && c.style.priceShape; if (cs && String(cs).startsWith('vec:')) s.add(cs.slice(4)); });
   return [...s].filter(id => MB.assets[id]);
 };
@@ -288,7 +288,7 @@ MB.defaultTheme = () => ({
   price: { font: MB.F_BOLD, size: 19, color: '#ffffff', fill: '#29A3E3', format: '{p}.-', shape: 'pill', vecRecolor: true },
   orn: { titlePre: '', titlePost: '', pricePre: '', pricePost: '', size: 0.85, gap: 0.3, mono: false },
   note: { font: MB.F_REG, size: 11, color: '#2C3A4B' },
-  badge: { on: true, font: MB.F_BOLD, size: 12, fill: '#29A3E3', color: '#ffffff' },
+  badge: { on: true, font: MB.F_BOLD, size: 12, fill: '#29A3E3', color: '#ffffff', shape: 'circle', vscale: 1.4, ty: 0 },
   sub: { font: MB.F_BOLD, size: 8.5, color: '#2C3A4B' },
   tag: { font: MB.F_BOLD, size: 10, color: '#FFFFFF', fill: '#E8457A', radius: 20 },
   terms: { font: MB.F_REG, size: 8.5, color: '#5A6475', pos: 'bottom' },

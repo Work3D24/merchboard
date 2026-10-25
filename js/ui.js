@@ -707,6 +707,28 @@ function ornSec(t) {
   sec.open = !!(t.orn.titlePre || t.orn.titlePost || t.orn.pricePre || t.orn.pricePost);
   return sec;
 }
+/* A/B/C background: circle, none, or any library / imported vector as a one-colour silhouette */
+const BADGE_NO_CATS = new Set(['ป้ายราคา']), badgeThumbs = new Map();
+const badgeThumb = (key, vec, col) => { const k = key + '|' + col; if (!badgeThumbs.has(k)) badgeThumbs.set(k, MB.vecThumbRaw(vec, 44, col)); return badgeThumbs.get(k); };
+function badgeShapePicker(b) {
+  if (b.shape == null) b.shape = 'circle';
+  const cur = String(b.shape), col = b.fill || '#29A3E3';
+  const pick = (v) => { b.shape = v; if (v.startsWith('vec:') && (b.vscale == null)) b.vscale = 1.4; MB.commit(); UI.rebuild(); };
+  const cell = (on, title, child, fn) => h('button', { class: 'bshape' + (on ? ' on' : ''), title, onclick: fn }, child);
+  const circle = h('span', { style: `display:inline-block;width:22px;height:22px;border-radius:50%;background:${col}` });
+  const libKeyOf = (id) => MB.assets[id] && MB.assets[id].libKey;
+  const curLib = cur.startsWith('vec:') ? libKeyOf(cur.slice(4)) : null;
+  const items = [
+    cell(cur === 'circle', 'วงกลม', circle, () => pick('circle')),
+    cell(cur === 'none', 'ไม่มีพื้น (ตัวอักษรอย่างเดียว)', h('span', { style: 'font-weight:700' }, 'A'), () => pick('none')),
+    ...MB.VLIB.filter(it => !BADGE_NO_CATS.has(it.cat)).map(it => cell(curLib === it.key, it.name,
+      h('img', { src: badgeThumb(it.key, MB.vlibVector(it.key), col), alt: '' }), () => pick('vec:' + MB.vlibAsset(it.key).id))),
+    ...(MB.state.vecLib || []).filter(id => MB.assets[id] && !MB.assets[id].libKey).map(id => cell(cur === 'vec:' + id, MB.assets[id].name,
+      h('img', { src: badgeThumb(id, MB.assets[id].vec, col), alt: '' }), () => pick('vec:' + id))),
+  ];
+  return h('div', { class: 'col' }, h('div', { class: 'lbl' }, 'พื้นหลังตัวอักษร (สีเดียว)'), h('div', { class: 'bshapes' }, items),
+    h('div', { class: 'brow' }, btn('นำเข้า SVG ของตัวเอง…', async () => { const f = await UI.pickFiles('.svg,image/svg+xml'); if (!f.length) return; const ids = await MB.aiUI.importSvgFiles(f, 'decor'); if (ids && ids[0]) pick('vec:' + ids[0]); })));
+}
 /* liquid glass card: blurred backdrop + sheen + rim light */
 function glassSec(P) {
   const g = P.glass = Object.assign({}, MB.defaultTheme().panel.glass, P.glass), pct = { fmt: v => Math.round(v * 100) + '%' };
@@ -843,7 +865,10 @@ function tabStyle() {
     section('เงื่อนไขสินค้า', UI.row('ตำแหน่ง', UI.sel(t.terms, 'pos', [['bottom', 'ท้ายการ์ด'], ['top', 'ใต้ชื่อ / ราคา']])),
       UI.row('ฟอนต์', UI.fontSel(t.terms, 'font')), UI.row('ขนาด', fsz(t.terms)), UI.row('สี', UI.col(t.terms, 'color'))),
     section('ตัวอักษร A / B / C', UI.chk(t.badge, 'on', 'แสดง (เมื่อมีมากกว่า 1 แบบ)'), UI.row('ฟอนต์', UI.fontSel(t.badge, 'font')), UI.row('ขนาด', fsz(t.badge)),
-      UI.row('สีวงกลม', UI.col(t.badge, 'fill')), UI.row('สีตัวอักษร', UI.col(t.badge, 'color'))),
+      badgeShapePicker(t.badge),
+      UI.row(t.badge.shape === 'none' ? 'สี (ไม่ใช้)' : 'สีพื้นหลังตัวอักษร', UI.col(t.badge, 'fill')), UI.row('สีตัวอักษร', UI.col(t.badge, 'color')),
+      String(t.badge.shape).startsWith('vec:') ? [UI.row('ขนาดรูปทรง', UI.rng(t.badge, 'vscale', 1, 2.4, 0.05, { fmt: v => Math.round(v * 100) + '%' })),
+        UI.row('เลื่อนตัวอักษรขึ้น/ลง', UI.rng(t.badge, 'ty', -0.3, 0.3, 0.01))] : null),
     section('ชื่อแบบย่อย (เช่น 001, 002)', UI.row('ตำแหน่ง', UI.sel(t, 'subPos', [['above', 'บนรูป (ใต้ตัวอักษร A/B/C)'], ['below', 'ใต้รูป']])), UI.row('ฟอนต์', UI.fontSel(t.sub, 'font')), UI.row('ขนาด', fsz(t.sub)), UI.row('สี', UI.col(t.sub, 'color'))),
     savedSec,
   ];
@@ -959,7 +984,7 @@ function cardStyleSec(c) {
     UI.row('สีพื้นการ์ด', UI.col(view, 'fill', { onset: set('fill') })), UI.row('ความทึบพื้น', UI.rng(view, 'opacity', 0, 1, 0.01, { fmt: pct, onset: set('opacity') })),
     UI.row('สีชื่อสินค้า', UI.col(view, 'titleColor', { onset: set('titleColor') })),
     UI.row('สีป้ายราคา', UI.col(view, 'priceFill', { onset: set('priceFill') })), UI.row('สีตัวเลขราคา', UI.col(view, 'priceColor', { onset: set('priceColor') })),
-    UI.row('สีวงกลม A/B/C', UI.col(view, 'badgeFill', { onset: set('badgeFill') })),
+    UI.row('สีพื้น A/B/C', UI.col(view, 'badgeFill', { onset: set('badgeFill') })),
     UI.row('เส้นขอบ', UI.rng(view, 'strokeW', 0, 8, 0.1, { onset: set('strokeW') })), UI.row('สีเส้นขอบ', UI.col(view, 'stroke', { onset: set('stroke') })),
     h('div', { class: 'brow' }, btn('คัดลอกสไตล์', UI.copyStyle), btn('วางสไตล์', UI.pasteStyle), btn('กลับไปใช้ธีม', () => { c.style = {}; MB.commit(); UI.rebuild(); })),
     hint('Ctrl+Shift+C / Ctrl+Shift+V = คัดลอก / วางสไตล์การ์ด (เลือกหลายการ์ดแล้ววางทีเดียวได้)'));
