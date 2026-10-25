@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MerchBoard">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#4366e9">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<script>window.MB_MODE = 'pwa';</script>
+<title>MerchBoard Studio</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="brand"><div class="logo">M</div><div><b>MerchBoard Studio</b><small>Official Merchandise lineup builder</small></div></div>
+    <input id="projName" class="projname" title="ชื่องาน / ชื่อไฟล์">
+    <div class="tb">
+      <button data-act="new" title="งานใหม่">＋ ใหม่</button>
+      <button data-act="open" title="เปิดไฟล์ .mbproj">เปิด</button>
+      <button data-act="save" title="บันทึกเป็นไฟล์ .mbproj (Ctrl+S)">บันทึก</button>
+      <span class="sep"></span>
+      <button data-act="undo" title="ย้อน (Ctrl+Z)">↶</button>
+      <button data-act="redo" title="ทำซ้ำ (Ctrl+Y)">↷</button>
+      <span class="sep"></span>
+      <button data-act="zoomOut" title="ซูมออก">−</button><span id="zoomLbl">100%</span><button data-act="zoomIn" title="ซูมเข้า">+</button>
+      <button data-act="fit" title="พอดีจอ (Ctrl+0)">พอดีจอ</button>
+    </div>
+    <div class="tb right">
+      <button class="aibtn" data-act="aiStudio" title="คลังลายฟรี + สร้างของตกแต่ง/ป้ายราคา/พื้นหลังด้วย AI (ChatGPT, AI ในเครื่อง, OpenAI API)">✨ AI & คลังลาย</button>
+      <button id="preflightBtn" data-act="preflight">ตรวจงาน</button>
+      <button class="primary big" data-act="export">Export ⤓</button>
+    </div>
+  </header>
+  <main>
+    <aside id="left">
+      <div class="lhead">
+        <h3>สินค้า <span id="cardCount"></span></h3>
+        <div class="brow"><button class="primary" data-act="addCard">＋ เพิ่มสินค้า</button><button data-act="importExcel">นำเข้า Excel</button></div>
+        <div class="brow"><button data-act="matchImages" title="เลือกรูปหลายไฟล์ ระบบจับคู่กับสินค้าจากชื่อไฟล์">จับคู่รูปจากชื่อไฟล์</button><button data-act="autoLayout">✦ จัดวางอัตโนมัติ</button></div>
+        <div class="brow"><button data-act="splitPages" title="แบ่งสินค้าทั้งหมดเป็นหลายหน้า">แบ่งหน้าอัตโนมัติ…</button><button data-act="addPage">＋ หน้าใหม่</button></div>
+        <input id="search" type="search" placeholder="ค้นหาสินค้า / SKU">
+      </div>
+      <div id="cardList"></div>
+      <div class="lfoot"><button class="small danger" data-act="clearCards">ลบสินค้าทั้งหมด</button></div>
+    </aside>
+    <section id="center">
+      <div id="stage"><canvas id="cv"></canvas><div class="drophint">วางไฟล์รูป: บนการ์ด = รูปสินค้า · แถบล่าง = โลโก้ค่าย · ที่ว่าง = รูปตกแต่ง</div></div>
+      <div id="pagebar"></div>
+    </section>
+    <aside id="right"><nav id="rtabs"></nav><div id="rbody"></div></aside>
+  </main>
+  <footer id="status"><span id="stPageNo"></span><span id="stPage"></span><span id="stSave"></span><span id="stServer"></span></footer>
+</div>
+<div id="modal" hidden></div>
+<div id="toast"></div>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="js/core.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/render.js"></script>
+<script src="js/jsx.js"></script>
+<script src="js/export.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/vlib.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      w && w.addEventListener('statechange', () => {
+        if (w.state === 'installed' && navigator.serviceWorker.controller && window.MB && MB.ui)
+          MB.ui.toast('มีเวอร์ชันใหม่ — ปิดแล้วเปิดแอปอีกครั้งเพื่ออัปเดต', 8000);
+      });
+    });
+  }).catch(e => console.warn('SW', e));
+}
+</script>
+</body>
+</html>
