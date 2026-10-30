@@ -10,8 +10,10 @@ const ALL_FORMATS = [
   ['psb', 'PSB', 'เหมือน PSD สำหรับไฟล์ขนาดใหญ่'],
   ['ai', 'AI + PDF (เวกเตอร์)', 'Illustrator แยกเลเยอร์ / Text แก้ได้ + PDF พิมพ์'],
 ];
-// iPad app: no Photoshop / Illustrator here — PSD/AI are made on the PC from the saved .mbproj
-const FORMATS = MB.PWA ? ALL_FORMATS.filter(f => ['png', 'jpg', 'pdf'].includes(f[0])) : ALL_FORMATS;
+// iPad / web app: no Photoshop / Illustrator here — PSD/PSB are written in the browser (js/psd.js), AI is made on the PC
+const NATIVE_PSD = { psd: 'Photoshop — แยกเลเยอร์ / Text แก้ได้ · หลายหน้า = 1 ไฟล์ แยก Artboard ตามหน้า', psb: 'เหมือน PSD สำหรับไฟล์ขนาดใหญ่' };
+const FORMATS = MB.PWA ? ALL_FORMATS.filter(f => f[0] !== 'ai').map(f => NATIVE_PSD[f[0]] ? [f[0], f[1], NATIVE_PSD[f[0]]] : f) : ALL_FORMATS;
+const nativePsd = (fmt) => ['psd', 'psb'].includes(fmt) && !MB.server.ok;
 
 MB.exportDialog = () => {
   const h = MB.h, st = MB.state, G = MB.pageGeom(st);
@@ -35,7 +37,7 @@ MB.exportDialog = () => {
   const rangeRow = MB.ui.row('ช่วงหน้า', rangeInp);
   const combineRow = h('div', { class: 'xopts' }, MB.ui.chk(o, 'combine', 'รวมเป็นไฟล์เดียว — 1 หน้า = 1 อาร์ตบอร์ด (ปิด = แยกไฟล์ละหน้า)', null, true));
   const upd = () => {
-    optAdobe.hidden = !needsAdobe(); optJpg.hidden = o.fmt !== 'jpg';
+    optAdobe.hidden = !needsAdobe() || nativePsd(o.fmt); optJpg.hidden = o.fmt !== 'jpg';
     rangeRow.hidden = o.scope !== 'range';
     combineRow.hidden = !(needsAdobe() && st.pages.length > 1 && o.scope !== 'current');
     if (MB.server.ok) {
@@ -43,7 +45,8 @@ MB.exportDialog = () => {
       serverNote.textContent = needsAdobe()
         ? ((o.fmt === 'ai' ? inf.ai : inf.ps) ? `จะสั่ง ${o.fmt === 'ai' ? 'Illustrator' : 'Photoshop'} สร้างไฟล์ให้อัตโนมัติ แล้วบันทึกลงโฟลเดอร์นี้` : 'ไม่พบโปรแกรม Adobe ในเครื่อง — จะบันทึกชุดสคริปต์ .jsx ไว้ให้รันเอง')
         : 'บันทึกลงโฟลเดอร์นี้';
-    } else if (MB.PWA) serverNote.textContent = 'ไฟล์จะขึ้นปุ่ม "บันทึก / แชร์" ให้แตะ → Save to Files / AirDrop · ต้องการ PSD / AI: กด "บันทึก" (ไฟล์ .mbproj) แล้วเปิดในโปรแกรมบนคอม';
+    } else if (MB.PWA) serverNote.textContent = 'ไฟล์จะขึ้นปุ่ม "บันทึก / แชร์" ให้แตะ → Save to Files / AirDrop' + (nativePsd(o.fmt) ? ' · PSD สร้างในเบราว์เซอร์ (RGB) — รูปเป็นเลเยอร์ภาพธรรมดา ไม่ใช่ Smart Object' : ' · ต้องการ AI: กด "บันทึก" (ไฟล์ .mbproj) แล้วเปิดในโปรแกรมบนคอม');
+    else if (nativePsd(o.fmt)) serverNote.textContent = 'PSD สร้างในเบราว์เซอร์ (RGB) แล้วดาวน์โหลด — รูปเป็นเลเยอร์ภาพธรรมดา ไม่ใช่ Smart Object';
     else serverNote.textContent = needsAdobe()
       ? 'โหมดออฟไลน์: จะดาวน์โหลด .zip (สคริปต์ .jsx + รูป) → แตกไฟล์ แล้วเปิดใน Photoshop/Illustrator: File › Scripts › Other Script… เลือกไฟล์ .jsx'
       : 'ไฟล์จะถูกดาวน์โหลดผ่านเบราว์เซอร์';
@@ -135,6 +138,13 @@ async function runExport(o, say) {
       c.width = c.height = 1; // free the big canvas before the next page
     }
     if (pdf) await saveOut(pdf.output('blob'), base + '.pdf', o, say);
+    return;
+  }
+  if (nativePsd(o.fmt)) {
+    const combine = o.combine && o.scope !== 'current' && pids.length > 1;
+    if (combine) say(`รวม ${pids.length} หน้าเป็นไฟล์เดียว · ${pids.length} อาร์ตบอร์ด`);
+    const jobs = combine ? [[pids, base]] : pids.map((pid, i) => [[pid], bases[i]]); // else one file per page
+    for (const [ids, name] of jobs) { const r = await MB.buildPsd(st, ids, name, { fmt: o.fmt, combine }, say); await saveOut(r.blob, r.name, o, say); }
     return;
   }
   // Photoshop / Illustrator

@@ -1365,7 +1365,7 @@ UI.preflight = () => {
 /* ---------- project file ---------- */
 UI.saveProject = () => {
   MB.download(new Blob([MB.projectJSON()], { type: 'application/json' }), MB.safeName(MB.state.name) + '.mbproj');
-  UI.toast(MB.PWA ? 'เลือก "บันทึกไปยังไฟล์" (iCloud Drive) หรือ AirDrop — แล้วเปิดไฟล์ .mbproj นี้ในโปรแกรมบนคอมเพื่อทำ PSD/AI' : 'ดาวน์โหลดไฟล์โปรเจกต์แล้ว (.mbproj — เก็บรูปทั้งหมดไว้ในไฟล์เดียว)', 6000);
+  UI.toast(MB.PWA ? 'เลือก "บันทึกไปยังไฟล์" (iCloud Drive) หรือ AirDrop — แล้วเปิดไฟล์ .mbproj นี้ในโปรแกรมบนคอมเพื่อทำไฟล์ AI' : 'ดาวน์โหลดไฟล์โปรเจกต์แล้ว (.mbproj — เก็บรูปทั้งหมดไว้ในไฟล์เดียว)', 6000);
 };
 UI.openProject = async () => {
   const [f] = await UI.pickFiles(MB.PWA ? '' : '.mbproj,.json', false); if (!f) return; // iOS greys out unknown extensions when filtered
@@ -1416,7 +1416,7 @@ UI.init = async () => {
   if (MB.PWA) {
     document.body.classList.add('pwa');
     const ai = document.querySelector('[data-act="aiStudio"]'); ai.textContent = '✦ คลังลาย'; ai.title = 'คลังลายฟรี + นำเข้า SVG';
-    const sv = document.querySelector('[data-act="save"]'); sv.title = 'บันทึกไฟล์ .mbproj → iCloud Drive / AirDrop แล้วเปิดในคอมเพื่อทำ PSD/AI';
+    const sv = document.querySelector('[data-act="save"]'); sv.title = 'บันทึกไฟล์ .mbproj → iCloud Drive / AirDrop แล้วเปิดในคอมเพื่อทำไฟล์ AI';
     try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {} // keep autosave from being evicted
     // touch has no Shift key: a sticky toggle for adding to the selection
     const mm = h('button', { class: 'mmode', title: 'แตะการ์ด/ชิ้นงานทีละอัน เพื่อเลือกหลายชิ้น (เหมือนกด Shift)', onclick: () => { MB.multiMode = !MB.multiMode; mm.classList.toggle('on', MB.multiMode); } }, '☐ เลือกหลายชิ้น');
@@ -1435,7 +1435,7 @@ UI.init = async () => {
   const ok = await MB.detectServer();
   $('#stServer').textContent = ok
     ? `เชื่อมต่อแล้ว · Photoshop ${MB.server.info.ps ? '✓' : '✗'} · Illustrator ${MB.server.info.ai ? '✓' : '✗'}`
-    : MB.PWA ? 'แอป iPad · ออฟไลน์ · PSD/AI ทำในคอมจากไฟล์ .mbproj' : 'โหมดออฟไลน์ (PSD/AI ส่งออกเป็นแพ็กเกจสคริปต์)';
+    : MB.PWA ? 'แอป iPad · ออฟไลน์ · PSD ส่งออกได้ในแอป · AI ทำในคอมจากไฟล์ .mbproj' : 'โหมดออฟไลน์ (PSD สร้างในเบราว์เซอร์ · AI ส่งออกเป็นแพ็กเกจสคริปต์)';
   if (restored) UI.toast('เปิดงานล่าสุดที่บันทึกอัตโนมัติไว้');
 };
 window.addEventListener('DOMContentLoaded', UI.init);
