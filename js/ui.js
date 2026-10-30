@@ -1134,6 +1134,7 @@ function inspLogo(l) {
    VARIANT 1 (design name) + VARIANT 2 (size), per-variant DETAILS / PRICE, STATUS (AVAILABLE / PRE-ORDER). */
 const FIELDS = [ // [key, label, guesses in priority order]
   ['name', 'ชื่อสินค้า *', [/^product ?name$/i, /^(ชื่อสินค้า|สินค้า|รายการ)$/i, /^(name|product|item|title)$/i, /(product|ชื่อ)/i]],
+  ['edition', 'Edition (แยกการ์ด)', [/^(edition|อีดิชัน)$/i]],
   ['collection', 'คอลเลกชัน (แยกกลุ่ม)', [/^(collection|series|คอลเลกชัน|ซีรีส์|หมวด)/i]],
   ['price', 'ราคา', [/^price/i, /(price|ราคา)/i]],
   ['code', 'ตัวอักษรแบบ (A/B/C)', [/^(code|ตัวอักษร)$/i]],
@@ -1162,6 +1163,14 @@ function guessMap(hdr, rows) {
     map[k] = -1;
     for (const re of res) { const i = hdr.findIndex((x, j) => !used.has(j) && re.test(x.trim())); if (i >= 0) { map[k] = i; used.add(i); break; } }
   });
+  // A/B/C code column left without a header: find it by its contents
+  if (map.code < 0) {
+    const i = hdr.findIndex((x, j) => !used.has(j) && !String(x).trim() && (() => {
+      const vals = rows.map(r => String(r[j] || '').trim()).filter(Boolean);
+      return vals.length >= 2 && vals.every(v => /^[A-Z]$/i.test(v));
+    })());
+    if (i >= 0) { map.code = i; used.add(i); }
+  }
   // purchase limits ("Limit to 2") are for the shop counter, not the artwork
   if (map.terms >= 0) {
     const vals = rows.map(r => String(r[map.terms] || '').trim()).filter(Boolean);
@@ -1226,16 +1235,24 @@ UI.importExcel = async () => {
 };
 function buildGroups(rows, map, cols) {
   const get = (r, k) => map[k] >= 0 ? String(r[map[k]] == null ? '' : r[map[k]]).trim() : '';
-  const groups = new Map();
+  const groups = new Map(), runs = new Map();
+  let prev = '';
   rows.forEach(r => {
-    const name = get(r, 'name'); if (!name) return;
+    const edition = get(r, 'edition'), name = get(r, 'name') && (get(r, 'name') + (edition ? ' ' + edition : '')); if (!name) return;
     const collection = get(r, 'collection');
     if (cols && map.collection >= 0 && cols[collection] === false) return;
-    const key = collection.toLowerCase() + '|' + name.toLowerCase();
+    const base = collection.toLowerCase() + '|' + name.toLowerCase();
+    if (base !== prev) { runs.set(base, (runs.get(base) || 0) + 1); prev = base; } // the same name again further down the sheet = another product
+    const key = runs.get(base) > 1 ? base + '#' + runs.get(base) : base;
     if (!groups.has(key)) groups.set(key, { key, name, collection, sku: get(r, 'sku'), rows: [], count: 0 });
     const g = groups.get(key);
     const st = get(r, 'status');
-    g.rows.push({ sku: get(r, 'sku'), code: get(r, 'code'), design: get(r, 'variant'), size: get(r, 'size'), price: get(r, 'price').replace(/[^\d.,]/g, ''), note: get(r, 'note'), status: AVAILABLE_RE.test(st) ? '' : st, terms: get(r, 'terms') });
+    let design = get(r, 'variant'), size = get(r, 'size');
+    if (size && !SIZE_RE.test(size)) { design = design ? design + ' ' + size : size; size = ''; } // VARIANT 2 holding a set / type name, not a size
+    let code = get(r, 'code');
+    const m = !code && design.match(/^\[\s*([A-Z])\s*\]\s*(.*)$/i); // "[ A ] TLE": the code written into the design name
+    if (m) { code = m[1]; design = m[2]; }
+    g.rows.push({ sku: get(r, 'sku'), code, design, size, price: get(r, 'price').replace(/[^\d.,]/g, ''), note: get(r, 'note'), status: AVAILABLE_RE.test(st) ? '' : st, terms: get(r, 'terms') });
     const n = parseInt(get(r, 'count'), 10); if (n > 0) g.count = Math.max(g.count, n);
   });
   return [...groups.values()].map(g => {
